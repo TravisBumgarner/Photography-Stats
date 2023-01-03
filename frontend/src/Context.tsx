@@ -1,10 +1,5 @@
 import React from 'react'
 
-import { getLocalStorage, setLocalStorage } from 'utilities'
-import { RefreshRemindersIPC, AppStartIPC } from '../../shared/types'
-
-const { ipcRenderer } = window.require('electron')
-
 type State = {
 }
 

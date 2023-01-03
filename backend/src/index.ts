@@ -7,7 +7,7 @@ import { app, BrowserWindow, ipcMain, Menu, Notification } from 'electron'
 
 import { isDev, isDebugProduction } from './config'
 import menu from './menu'
-import { NotificationIPC, BackupIPC, AppStartIPC, AddReminderIPC, EditReminderIPC, RefreshRemindersIPC } from '../../shared/types'
+import { NotificationIPC, BackupIPC, AppStartIPC, AddReminderIPC, EditReminderIPC, RefreshRemindersIPC, ExporeRootDirIPC } from '../../shared/types'
 import { deleteReminder, addReminder, refreshReminders, editReminder } from './reminders'
 
 if (isDev) require('electron-reloader')(module)
@@ -20,8 +20,8 @@ Menu.setApplicationMenu(menu)
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: isDev || isDebugProduction ? 1000 : 800,
-        height: isDev || isDebugProduction ? 1000 : 600,
+        width: isDev || isDebugProduction ? 500 : 300,
+        height: isDev || isDebugProduction ? 500 : 300,
         x: 0,
         y: 0,
         title: isDev ? "DEV MODE" : "Todo Today",
@@ -57,3 +57,9 @@ app.on('window-all-closed', function () {
 ipcMain.on('notification', async (event, arg: NotificationIPC) => {
     new Notification({ body: arg.body, title: arg.title }).show()
 })
+
+ipcMain.handle('exploreRootDir', async (event, message: ExporeRootDirIPC) => {
+    console.log('message', message)
+    return message
+})
+
