@@ -1,12 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// Unclear why the following line is mad.
-import { Foobar } from './types' //eslint-disable-line 
+import { ContextBridge } from './types'
 
-contextBridge.exposeInMainWorld('foobar', {
-    node: () => process.versions.node,
-    chrome: () => process.versions.chrome,
-    electron: () => process.versions.electron,
-    ping: () => ipcRenderer.invoke('ping'),
-    // we can also expose variables, not just functions
-} as Foobar)
+const contextBridgeContents: ContextBridge = {
+    selectFolder: () => ipcRenderer.invoke('dialog:openDirectory'),
+    processPhotos: (folder: string) => {
+        return ipcRenderer.invoke('processPhotos', { folder })
+    }
+}
+
+contextBridge.exposeInMainWorld('contextBridge', contextBridgeContents)

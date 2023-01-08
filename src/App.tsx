@@ -1,26 +1,23 @@
 import { createRoot } from 'react-dom/client';
 import { useCallback, useState } from 'react';
-import styled from 'styled-components'
-
-const Header = styled.h1`
-    background-color: pink;
-    color: #363636
-`
 
 const App = () => {
-    const [result, setResult] = useState('')
-    const handleClick = useCallback(() => {
-        window.foobar.ping().then(r => setResult(prev => prev + r))
+    const [folder, setFolder] = useState('/Users/travisbumgarner/Desktop/large')
+    const [results, setResults] = useState('')
+    const handleSelectPath = useCallback(() => {
+        window.contextBridge.selectFolder().then(r => setFolder(r))
+    }, [])
+
+    const handleProcessPhotos = useCallback(() => {
+        window.contextBridge.processPhotos(folder).then(r => setResults(r))
     }, [])
 
     return (
         <>
-            <Header>Hello World.</Header>
-            <p>{window.foobar.chrome()}</p>
-            <p>{window.foobar.electron()}</p>
-            <p>{window.foobar.node()}</p>
-            <button onClick={handleClick}>Click Me!</button>
-            <p>Result: {result}</p>
+            <button onClick={handleSelectPath}>Select Path</button>
+            <p>Selected Folder: {folder}</p>
+            <button onClick={handleProcessPhotos}>Process Photos</button>
+            <p>Results: {results}</p>
         </>
     )
 }

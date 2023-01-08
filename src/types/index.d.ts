@@ -1,14 +1,12 @@
-interface Foobar {
-    node: () => string,
-    chrome: () => string,
-    electron: () => string,
-    ping: () => Promise<string>
+type ContextBridge = {
+    selectFolder: () => Promise<string>
+    processPhotos: (folder: string) => Promise<string>
 }
 
 declare global {
     interface Window {
-        foobar: Foobar
+        contextBridge: ContextBridge
     }
 }
 
-export { Foobar }
+export { ContextBridge }
