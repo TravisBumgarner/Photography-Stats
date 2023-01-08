@@ -1,9 +1,26 @@
-import fs from 'fs'
-import path from 'path'
+const { readdir } = require('fs').promises;
 
+import { Photo } from 'shared';
 import * as exifr from 'exifr'
-import { v5 as uuidv5 } from 'uuid'
 
+
+const getFileList = async (dirName: string) => {
+    let files: string[] = [];
+    const items = await readdir(dirName, { withFileTypes: true });
+
+    for (const item of items) {
+        if (item.isDirectory()) {
+            files = [
+                ...files,
+                ...(await getFileList(`${dirName}/${item.name}`)),
+            ];
+        } else {
+            files.push(`${dirName}/${item.name}`);
+        }
+    }
+
+    return files;
+};
 
 type ParsedData = {
     DateTimeOriginal: string
@@ -17,24 +34,6 @@ type ParsedData = {
     ExposureProgram?: string
     ISO?: number
     FocalLength?: number
-}
-
-type Sidecar = {
-    lr: {
-        hierarchicalSubject: string[]
-    }
-}
-
-type Photo = {
-    src: string,
-    make: string,
-    model: string,
-    lens: string,
-    dateTaken: string,
-    aperture: string,
-    shutterSpeed: string,
-    iso: string,
-    focalLength: string,
 }
 
 const formatShutterSpeed = (shutterSpeed: number) => {
@@ -59,14 +58,11 @@ const formatLens = (possibleLenses: (undefined | string)[]) => {
 
 const processPhoto = async (file: string): Promise<Photo | null> => {
     let data: ParsedData
-    const sidecar = await exifr.sidecar(file) as unknown as Sidecar
 
-    try {
-        data = await exifr.parse(file)
-    } catch {
+    data = await exifr.parse(file)
+    if (!data) {
         return null
     }
-
 
     const results = {
         src: file,
@@ -82,32 +78,47 @@ const processPhoto = async (file: string): Promise<Photo | null> => {
 
     const missingKeys = Object.keys(results).filter((key: keyof typeof results) => results[key] === undefined)
     if (missingKeys.length > 0) {
-        console.log(`${file} Missing values: ${JSON.stringify(missingKeys)}, they were probably not exported from Lightroom`)
+        console.log(`${file} Missing values: ${JSON.stringify(missingKeys)}`)
+        console.log(`${file} Available Data: ${JSON.stringify(Object.keys(data))}`)
     }
     return results
 }
 
-const VALID_EXTENSIONS = ['jpg']
+const VALID_EXTENSIONS = ['jpg', 'dng', 'nef', 'raw', 'png', 'jpeg', 'arw', 'cr2', 'heic', 'tif']
+const BLOCKED_EXTENSIONS = ['mov', 'mp4', 'avi', 'mts', 'xmp', 'ds_store', 'gif', 'thm,', 'psd', 'pto', 'mk', 'mpg']
 
 const processPhotos = async (folderPath: string) => {
-    const photos: Record<string, Photo> = {}
+    const photos: Photo[] = []
+    const blockedCounts: Record<string, number> = {}
+    const notSupportedCounts: Record<string, number> = {}
+    const invalidMetadata: string[] = []
 
-    // https://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search
-    const files = fs.readdirSync(folderPath)
+    const files = await getFileList(folderPath)
 
     for (let file of files) {
-        const extension = file.split('.').slice(-1)[0]
-        if (!VALID_EXTENSIONS.includes(extension)) {
-            console.log('\tSkipping for invalid file type')
+        const extension = file.split('.').slice(-1)[0].toLowerCase()
+        if (BLOCKED_EXTENSIONS.includes(extension)) {
+            if (!(extension in blockedCounts)) blockedCounts[extension] = 0
+            blockedCounts[extension]++
             continue
         }
 
-        const result = await processPhoto(path.join(folderPath, file))
-        if (result === null) console.log('skipping', file)
-        else {
-            photos[result.src] = result
+        if (!VALID_EXTENSIONS.includes(extension)) {
+            if (!(extension in notSupportedCounts)) notSupportedCounts[extension] = 0
+            notSupportedCounts[extension]++
+            continue
         }
+
+        const result = await processPhoto(file)
+        if (result === null) {
+            invalidMetadata.push(file)
+            continue
+        }
+        photos.push(result)
     }
+    console.log(photos.length)
+    console.log(JSON.stringify(blockedCounts))
+    console.log(JSON.stringify(notSupportedCounts))
     return JSON.stringify({ photos });
 }
 
